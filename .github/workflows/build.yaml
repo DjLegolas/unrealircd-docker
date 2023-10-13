@@ -1,0 +1,78 @@
+name: Build UnrealIRCd
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+
+  workflow_dispatch:
+
+jobs:
+  check-release:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check-newer-release.outputs.version }}
+
+    steps:
+      - name: Download JSON
+        run: |
+          curl -o latest_release.json https://www.unrealircd.org/downloads/list.json
+
+      - uses: actions/cache/restore@v3
+        id: cache-release-restore
+        with:
+          path: ./last_handled_release.txt
+          key: last-handled-release-${{ github.run_id }}
+          restore-keys: |
+            last-handled-release-          
+
+      - name: Check for New Release
+        id: check-newer-release
+        run: |
+          LATEST_RELEASE=$(cat latest_release.json | jq -r .[].Stable.version)
+          LAST_HANDLED_RELEASE=$(cat last_handled_release.txt || echo -1)
+          
+          if [[ "$LATEST_RELEASE" != "$LAST_HANDLED_RELEASE" ]]; then
+            echo "New release available: $LATEST_RELEASE. Triggering the workflow."
+            # Update the last handled release version
+            echo "$LATEST_RELEASE" > last_handled_release.txt
+            echo "version=$LATEST_RELEASE" >> $GITHUB_OUTPUT
+          else
+            echo "No new release available or already handled."
+            echo "version=-1" >> $GITHUB_OUTPUT
+          fi
+
+      - uses: actions/cache/save@v3
+        id: cache-release-save
+        if: ${{ steps.check-newer-release.outputs.version != -1 }}
+        with:
+          path: ./last_handled_release.txt
+          key: last-handled-release-${{ github.run_id }}
+
+  build-docker:
+    runs-on: ubuntu-latest
+    needs: check-release
+    if: ${{ needs.check-release.outputs.version != -1 }}
+
+    env:
+      version: ${{needs.check-release.outputs.version}}
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          build-args: VERSION=${{ env.version }}
+          push: true
+          tags: |
+            djlegolas/unrealircd:latest
+            djlegolas/unrealircd:${{ env.version }}

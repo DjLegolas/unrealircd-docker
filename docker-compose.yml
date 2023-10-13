@@ -1,0 +1,11 @@
+version: "3"
+
+services:
+  unrealircd:
+    image: djlegolas/unrealircd:latest
+    ports:
+      - "6667:6667"
+      - "6697:6697"
+    volumes:
+      - "/path/to/unrealircd.conf:/app/conf/unrealircd.conf"
+      - "/path/to/tls/certs/folder:/app/tls"
