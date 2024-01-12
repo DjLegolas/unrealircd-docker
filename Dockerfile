@@ -4,6 +4,7 @@ ARG VERSION=6.1.2.1
 
 COPY .docker/config.settings /tmp/config.settings
 COPY .docker/crontab /tmp/crontab
+COPY .docker/entrypoint.sh /bin/entrypoint
 
 WORKDIR /opt/src/unrealircd
 
@@ -30,12 +31,11 @@ RUN set -x \
   && apk --no-cache del .build-deps \
   && rm -rf /opt/src/* /tmp/crontab /tmp/config.settings \
   # finalize
+  && chmod +x /bin/entrypoint \
   && mkdir -p /app/tls \
   && chown -R ircd:ircd . /usr/unrealircd /app
 
 USER ircd
 WORKDIR /usr/unrealircd
-
-COPY .docker/entrypoint.sh /bin/entrypoint
 
 CMD ["/bin/entrypoint"]
