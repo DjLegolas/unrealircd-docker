@@ -21,6 +21,4 @@ if [ ! -f $CERT_PUB_PATH ]; then
   chmod g-rwx $CERT_REQ_PATH $CERT_KEY_PATH $CERT_PUB_PATH
 fi
 
-/usr/unrealircd/bin/unrealircd -F &
-
-/bin/sh
+/usr/unrealircd/bin/unrealircd -F
