@@ -17,7 +17,7 @@ jobs:
         run: |
           curl -o latest_release.json https://www.unrealircd.org/downloads/list.json
 
-      - uses: actions/cache/restore@v3
+      - uses: actions/cache/restore@v4
         id: cache-release-restore
         with:
           path: ./last_handled_release.txt
@@ -41,7 +41,7 @@ jobs:
             echo "version=-1" >> $GITHUB_OUTPUT
           fi
 
-      - uses: actions/cache/save@v3
+      - uses: actions/cache/save@v4
         id: cache-release-save
         if: ${{ steps.check-newer-release.outputs.version != -1 }}
         with:
@@ -67,7 +67,7 @@ jobs:
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
