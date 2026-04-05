@@ -1,43 +1,69 @@
-# UnrealIRCd docker
+# UnrealIRCd Docker
+[![Docker Pulls](https://img.shields.io/docker/pulls/djlegolas/unrealircd)](https://hub.docker.com/r/djlegolas/unrealircd)
+[![Docker Image Size](https://img.shields.io/docker/image-size/djlegolas/unrealircd)](https://hub.docker.com/r/djlegolas/unrealircd)
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/DjLegolas/unrealircd-docker/build.yaml)](https://github.com/DjLegolas/unrealircd-docker)
 
-## What is UnrealIRCd
+Unofficial Docker image for running [UnrealIRCd](https://www.unrealircd.org).
 
-[UnrealIRCd]( https://www.unrealircd.org ) is an Open Source IRC Server, serving thousands of networks since 1999. It
-runs on Linux, OS X and Windows and is currently the most widely deployed IRCd with a market share of 42%. UnrealIRCd is
-a highly advanced IRCd with a strong focus on modularity, an advanced and highly configurable configuration file. Key
-features include SSL/TLS, cloaking, its advanced anti-flood and anti-spam systems, swear filtering and module support.
+## Configuration
 
-# Configuration
+Use the UnrealIRCd v6 example config as a starting point:
+[example.conf](https://raw.githubusercontent.com/unrealircd/unrealircd/unreal60_dev/doc/conf/examples/example.conf)
 
-The UnrealIRCd reference config can be
-found in the [official UnrealIRCd reference config]( https://raw.githubusercontent.com/unrealircd/unrealircd/unreal60_dev/doc/conf/examples/example.conf )
-for version 6 and above.\
-This file must be mounted at `/app/data/unrealircd.conf`.\
-When adding additional custom configurations, please mount only new files,
-as editing the default config files is not recommended by UnrealIRCd.\
-For more information regarding the configuration options, please refer to the [official UnrealIRCd configuration documentation](https://www.unrealircd.org/docs/Configuration).
+In this image, the UnrealIRCd config directory is `/app/conf`, so the main config must be mounted as:
+`/app/conf/unrealircd.conf`
 
+For UnrealIRCd config syntax and modules, see the official docs:
+[UnrealIRCd Configuration](https://www.unrealircd.org/docs/Configuration)
 
-# Getting Started
+## Quick Start
 
-## Docker
-
-UnrealIRCd must have both a configuration and tls key-pair files.\
-The is deployed via docker image like so:
+### Docker
 
 ```bash
-docker run -d --name unreadlircd \
-  -v /path/to/file/unrealircd.conf:/app/data/unrealircd.conf \
-  -p 6667:6667 -p 6697:6697 \
+docker run -d --name unrealircd \
+  -v /path/to/unrealircd.conf:/app/conf/unrealircd.conf:ro \
+  -v /path/to/data:/app/data \
+  -v /path/to/logs:/app/logs \
+  -p 6667:6667 \
+  -p 6697:6697 \
   djlegolas/unrealircd:latest
 ```
 
-### Available Mount Points
-All the desired mounts are located under `/app`:
-* `/app/config` configurations.
-* `/app/data` all of the instance DB.
-* `/app/tls` location to mount user-defined certs. Don't forget to add certs into `unrealircd.conf`.
+### Docker Compose
 
-or via docker-compose:
+```yaml
+services:
+  unrealircd:
+    image: djlegolas/unrealircd:latest
+    ports:
+      - "6667:6667"
+      - "6697:6697"
+    volumes:
+      - "/path/to/unrealircd.conf:/app/conf/unrealircd.conf:ro"
+      - "/path/to/data:/app/data"
+      - "/path/to/logs:/app/logs"
+      # Optional: custom TLS certs/keys
+      - "/path/to/tls:/app/conf/tls"
+```
 
-[Official Example](https://github.com/DjLegolas/unrealircd-docker/blob/main/docker-compose.yml)
+## Mount Points
+
+Useful container paths under `/app`:
+
+- `/app/conf` UnrealIRCd config files (`unrealircd.conf` lives here).
+- `/app/conf/tls` TLS certificate/key directory used by default config.
+- `/app/data` runtime data files.
+- `/app/logs` log files.
+
+## TLS Notes
+
+- If no TLS files exist in `/app/conf/tls`, the container entrypoint auto-generates a self-signed certificate.
+- For production, mount your own certs into `/app/conf/tls` and reference them in `unrealircd.conf`.
+
+## Image Tags
+
+Published tags include:
+
+- `djlegolas/unrealircd:latest`
+- `djlegolas/unrealircd:<unrealircd-version>`
