@@ -1,5 +1,3 @@
-version: "3"
-
 services:
   unrealircd:
     image: djlegolas/unrealircd:latest
