@@ -66,7 +66,73 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
+      - name: Build Docker image (local)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          build-args: VERSION=${{ env.version }}
+          push: false
+          load: true
+          tags: unrealircd:ci-${{ github.run_id }}
+
+      - name: Verify Docker image runtime
+        run: |
+          set -euo pipefail
+
+          IMAGE_TAG="unrealircd:ci-${{ github.run_id }}"
+          CONFIG_PATH="$PWD/smoke.unrealircd.conf"
+          CONTAINER_NAME="unrealircd-smoke"
+
+          cleanup() {
+            docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
+            rm -f "$CONFIG_PATH"
+          }
+          trap cleanup EXIT
+
+          SRC_ID="$(docker create "$IMAGE_TAG")"
+          docker cp "$SRC_ID:/app/conf/examples/example.conf" "$CONFIG_PATH"
+          docker rm "$SRC_ID"
+
+          sed -i 's/^oper bobsmith {/oper netadmin1 {/' "$CONFIG_PATH"
+          sed -i 's~password "\\$argon2id\.\.etc\.\."~password "ChangeMeNow123!ForSmokeTest"~' "$CONFIG_PATH"
+          awk '
+            BEGIN { n = 0 }
+            {
+              if ($0 ~ /"and another one";/) {
+                n++
+                if (n == 1) {
+                  sub(/"and another one";/, "\"Z9yX7wV5uT3sR1qP9oN7mL5kJ3hG1fD9cB7aY5xW3vU1tS9rQ7pN5mL3kJ1hG9fE7dC5bA3pQ9rS7tU5vW1\";")
+                } else if (n == 2) {
+                  sub(/"and another one";/, "\"mN1bV3cX5zL7kJ9hG1fD3sA5qW7eR9tY1uI3oP5lK7jH9gF1dS3aQ5wE7rT9yU1iO3pA5sD7fG9hJ1kL3mN5\";")
+                }
+              }
+              print
+            }
+          ' "$CONFIG_PATH" > "${CONFIG_PATH}.tmp" && mv "${CONFIG_PATH}.tmp" "$CONFIG_PATH"
+          sed -i "s~kline-address 'set.this.to.email.address';~kline-address 'admin@example.org';~" "$CONFIG_PATH"
+
+          docker run -d --name "$CONTAINER_NAME" \
+            --mount "type=bind,source=$CONFIG_PATH,target=/app/conf/unrealircd.conf,readonly" \
+            "$IMAGE_TAG"
+
+          sleep 12
+
+          RUNNING="$(docker inspect --format '{{.State.Running}}' "$CONTAINER_NAME")"
+          if [ "$RUNNING" != "true" ]; then
+            echo "Container did not stay running."
+            docker logs "$CONTAINER_NAME" || true
+            exit 1
+          fi
+
+          if ! docker logs "$CONTAINER_NAME" 2>&1 | grep -q "UnrealIRCd started."; then
+            echo "UnrealIRCd did not report successful startup."
+            docker logs "$CONTAINER_NAME" || true
+            exit 1
+          fi
+
       - name: Build and push Docker image
+        if: ${{ success() }}
         uses: docker/build-push-action@v7
         with:
           context: .
