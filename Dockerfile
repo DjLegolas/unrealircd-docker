@@ -15,7 +15,7 @@ RUN set -x \
   # normalize line endings \
   && sed -i 's/\r$//' /tmp/config.settings /tmp/crontab /bin/entrypoint \
   # install packages \
-  && apk --no-cache add libcurl openssl \
+  && apk --no-cache add libcurl openssl pcre2 \
   && apk --no-cache add --virtual .build-deps gcc make binutils libc6-compat \
    g++ openssl-dev curl curl-dev busybox-suid pcre2-dev argon2-dev c-ares-dev \
   # get unrealircd source files \
