@@ -17,7 +17,7 @@ jobs:
         run: |
           curl -o latest_release.json https://www.unrealircd.org/downloads/list.json
 
-      - uses: actions/cache/restore@v5
+      - uses: actions/cache/restore@v6
         id: cache-release-restore
         with:
           path: ./last_handled_release.txt
@@ -41,7 +41,7 @@ jobs:
             echo "version=-1" >> $GITHUB_OUTPUT
           fi
 
-      - uses: actions/cache/save@v5
+      - uses: actions/cache/save@v6
         id: cache-release-save
         if: ${{ steps.check-newer-release.outputs.version != -1 }}
         with:
@@ -58,7 +58,7 @@ jobs:
 
     steps:
       - name: Check out
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v4
